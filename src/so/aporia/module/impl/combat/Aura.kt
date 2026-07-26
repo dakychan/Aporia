@@ -16,6 +16,7 @@ import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
 import net.minecraft.network.protocol.game.ServerboundInteractPacket
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.phys.Vec3
 import so.aporia.utils.imports.*
@@ -199,6 +200,11 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
 
     private fun doAttack(target: Entity) {
         val player = mc.player!!
+        // Rotation is set at the TOP of the client tick, but sendPosition() only runs later in the
+        // same tick — so the server would validate this hit against the previous tick's rotation.
+        // While moving that stale rotation is off-target and the hit gets rejected server-side
+        // (hits only register when standing still). Flush the current facing to the server first.
+        player.connection.send(ServerboundMovePlayerPacket.Rot(player.yRot, player.xRot, player.onGround(), player.horizontalCollision))
         player.connection.send(ServerboundInteractPacket(target.id, InteractionHand.MAIN_HAND, Vec3(target.x, target.y, target.z), false))
         player.attack(target)
         player.swing(InteractionHand.MAIN_HAND)

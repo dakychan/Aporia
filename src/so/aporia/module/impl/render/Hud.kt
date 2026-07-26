@@ -10,10 +10,17 @@ import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.impl.render.hud.DynamicIsland
 import so.aporia.module.impl.render.hud.TargetHud
+import so.aporia.module.impl.render.hud.KeyBinds
+import so.aporia.module.impl.render.hud.ScoreBoard
+import so.aporia.module.impl.render.hud.Potions
+import so.aporia.module.impl.render.hud.HudStyle
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.SelectSetting
+import so.aporia.module.settings.Setting
 import so.aporia.utils.events.EventHandler
 import so.aporia.utils.events.impl.MouseClickEvent
+import so.aporia.utils.user.render.animation.SpringSimulator
+import so.aporia.utils.user.render.avatar.AvatarRenderer
 import so.aporia.utils.user.render.core.AporiaRenderer
 import so.aporia.utils.user.render.font.Fonts
 import java.text.DecimalFormat
@@ -34,6 +41,9 @@ class Hud : Module("HUD", Category.VISUAL) {
     val showPlayerCount = BooleanSetting("Player Count", "Display online player count", true)
     val showSpeed = BooleanSetting("Show Speed", "Display movement speed", false)
     val showDirection = BooleanSetting("Show Direction", "Display cardinal direction", false)
+    val showKeybinds = BooleanSetting("Keybinds", "Display bound modules panel", true)
+    val showScoreboard = BooleanSetting("Scoreboard", "Styled server scoreboard", true)
+    val showPotions = BooleanSetting("Potions", "Display active effects", true)
 
     private val panelPos = ElementRect(0f, 0f, 0f, 0f)
     private var isDragging = false
@@ -44,19 +54,67 @@ class Hud : Module("HUD", Category.VISUAL) {
     private var mouseX = 0f
     private var mouseY = 0f
 
+    // ── right-click settings popup ──
+    private var popupTarget: String? = null
+    private var popupClosing = false
+    private var popupX = 0f
+    private var popupY = 0f
+    private val popupSpring = SpringSimulator(320f, 26f, 0f)
+    private var popupLastTick = System.currentTimeMillis()
+    private val POPUP_W = 156f
+    private val POPUP_ROW_H = 16f
+    private val POPUP_HEADER_H = 20f
+    private val POPUP_PAD = 6f
+
     init { enable() }
 
-    override val settings = listOf(watermarkMode, showFps, showCoords, showPing, showTargetHud, showPlayerCount, showSpeed, showDirection)
+    // NOTE: HudSettings (per-element, opened via RMB popup) are intentionally NOT part of the
+    // module's ClickGui settings — they are a separate tier from ModulesSettings / Scripts.
+    override val settings: List<Setting<*>> =
+        listOf(watermarkMode, showFps, showCoords, showPing, showTargetHud, showPlayerCount, showSpeed, showDirection,
+            showKeybinds, showScoreboard, showPotions)
+
+    private fun elementSettings(target: String): List<Setting<*>> = when (target) {
+        "keybinds" -> KeyBinds.settings
+        "scoreboard" -> ScoreBoard.settings
+        "potions" -> Potions.settings
+        else -> emptyList()
+    }
+
+    private fun elementTitle(target: String): String = when (target) {
+        "keybinds" -> "Keybinds"; "scoreboard" -> "Scoreboard"; "potions" -> "Potions"; else -> ""
+    }
 
     override fun onEnable() { bus.register(this) }
-    override fun onDisable() { bus.unregister(this) }
+    override fun onDisable() {
+        bus.unregister(this)
+        // Let the vanilla scoreboard / effect icons render again
+        ScoreBoard.active = false
+        Potions.active = false
+    }
 
     @EventHandler
     fun onMouseClick(e: MouseClickEvent) {
         if (e.action() != MouseClickEvent.Action.PRESS) return
-        if (DynamicIsland.handleMediaClick(e.x(), e.y(), e.button())) { e.cancel(); return }
         val x = e.x().toFloat()
         val y = e.y().toFloat()
+        val button = e.button()
+
+        // Popup open: a click either toggles a setting, or (outside) closes it. Always consumed.
+        if (popupTarget != null && !popupClosing) {
+            if (button == 0 && insidePopup(x, y)) togglePopupSettingAt(x, y)
+            else closePopup()
+            e.cancel(); return
+        }
+
+        // Right-click a HUD element -> open its settings popup.
+        if (button == 1) {
+            elementAt(x, y)?.let { openPopup(it, x, y); e.cancel() }
+            return
+        }
+        if (button != 0) return
+
+        if (DynamicIsland.handleMediaClick(e.x(), e.y(), button)) { e.cancel(); return }
 
         // Check island (pill) hit
         val pill = DynamicIsland.getPillRect()
@@ -78,6 +136,77 @@ class Hud : Module("HUD", Category.VISUAL) {
             isDragging = true; dragTarget = "panel"
             dragOffX = x - panelPos.x; dragOffY = y - panelPos.y
             e.cancel(); return
+        }
+        // Check ported HUD panels
+        when (elementAt(x, y)) {
+            "keybinds" -> { isDragging = true; dragTarget = "keybinds"; dragOffX = x - KeyBinds.posX; dragOffY = y - KeyBinds.posY; e.cancel() }
+            "scoreboard" -> { isDragging = true; dragTarget = "scoreboard"; dragOffX = x - ScoreBoard.posX; dragOffY = y - ScoreBoard.posY; e.cancel() }
+            "potions" -> { isDragging = true; dragTarget = "potions"; dragOffX = x - Potions.posX; dragOffY = y - Potions.posY; e.cancel() }
+        }
+    }
+
+    private fun hitTest(x: Float, y: Float, ex: Float, ey: Float, ew: Float, eh: Float): Boolean =
+        ew > 0f && x >= ex && x < ex + ew && y >= ey && y < ey + eh
+
+    private fun elementAt(x: Float, y: Float): String? = when {
+        showKeybinds.isEnabled && hitTest(x, y, KeyBinds.posX, KeyBinds.posY, KeyBinds.lastW, KeyBinds.lastH) -> "keybinds"
+        showScoreboard.isEnabled && hitTest(x, y, ScoreBoard.posX, ScoreBoard.posY, ScoreBoard.lastW, ScoreBoard.lastH) -> "scoreboard"
+        showPotions.isEnabled && hitTest(x, y, Potions.posX, Potions.posY, Potions.lastW, Potions.lastH) -> "potions"
+        else -> null
+    }
+
+    // ── popup helpers ──
+    private fun popupHeight(target: String): Float =
+        POPUP_HEADER_H + elementSettings(target).size * POPUP_ROW_H + POPUP_PAD
+
+    private fun insidePopup(x: Float, y: Float): Boolean {
+        val t = popupTarget ?: return false
+        return x >= popupX && x < popupX + POPUP_W && y >= popupY && y < popupY + popupHeight(t)
+    }
+
+    private fun openPopup(target: String, x: Float, y: Float) {
+        popupTarget = target
+        popupClosing = false
+        val sw = mc.window.guiScaledWidth.toFloat()
+        val sh = mc.window.guiScaledHeight.toFloat()
+        popupX = x.coerceIn(0f, (sw - POPUP_W).coerceAtLeast(0f))
+        popupY = y.coerceIn(0f, (sh - popupHeight(target)).coerceAtLeast(0f))
+        popupSpring.snap(0f); popupSpring.setTarget(1f)
+        popupLastTick = System.currentTimeMillis()
+    }
+
+    private fun closePopup() { popupClosing = true; popupSpring.setTarget(0f) }
+
+    private fun togglePopupSettingAt(x: Float, y: Float) {
+        val t = popupTarget ?: return
+        var rowY = popupY + POPUP_HEADER_H
+        for (s in elementSettings(t)) {
+            if (y >= rowY && y < rowY + POPUP_ROW_H) { (s as? BooleanSetting)?.toggle(); return }
+            rowY += POPUP_ROW_H
+        }
+    }
+
+    private fun renderPopup(r: AporiaRenderer) {
+        val now = System.currentTimeMillis()
+        popupSpring.update((now - popupLastTick).coerceIn(1L, 50L) / 1000f)
+        popupLastTick = now
+        val target = popupTarget ?: return
+        val v = popupSpring.value()
+        if (popupClosing && v <= 0.02f) { popupTarget = null; return }
+
+        val prog = v.coerceIn(0f, 1f)
+        val fullH = popupHeight(target)
+        val h = (fullH * prog).coerceAtLeast(1f)
+        HudStyle.panel(r, popupX, popupY, POPUP_W, h, HudStyle.RADIUS, false)
+
+        if (prog < 0.55f) return  // content appears once the box has mostly expanded
+
+        r.drawText(Fonts.BOLD, elementTitle(target).uppercase(), popupX + POPUP_PAD, popupY + POPUP_PAD, 8f, HudStyle.header())
+        var rowY = popupY + POPUP_HEADER_H
+        val th = theme
+        for (s in elementSettings(target)) {
+            s.draw(r, popupX + 2f, rowY + (POPUP_ROW_H - 14f) / 2f, POPUP_W - 4f, th, mouseX, mouseY, false)
+            rowY += POPUP_ROW_H
         }
     }
 
@@ -108,14 +237,23 @@ class Hud : Module("HUD", Category.VISUAL) {
                 "island" -> { DynamicIsland.posX = sx; DynamicIsland.posY = sy }
                 "target" -> { TargetHud.posX = sx; TargetHud.posY = sy }
                 "panel" -> { panelPos.x = sx; panelPos.y = sy }
+                "keybinds" -> { KeyBinds.posX = sx; KeyBinds.posY = sy; KeyBinds.userMoved = true }
+                "scoreboard" -> { ScoreBoard.posX = sx; ScoreBoard.posY = sy; ScoreBoard.userMoved = true }
+                "potions" -> { Potions.posX = sx; Potions.posY = sy; Potions.userMoved = true }
             }
         }
 
-        DynamicIsland.render(r, parseMode(watermarkMode.getSelectedIndex()))
+        // Render HUD elements. While dragging, the dragged element is committed (flushed) ON TOP of
+        // the others so it fully overlaps them — background AND text — instead of the fixed order.
+        val order = arrayOf("island", "target", "keybinds", "scoreboard", "potions", "panel")
+        val top = if (isDragging) dragTarget else ""
+        for (name in order) if (name != top) renderElement(name, gfx, r, sw, sh)
+        if (top.isNotEmpty()) {
+            r.flush()
+            renderElement(top, gfx, r, sw, sh)
+        }
 
-        if (showTargetHud.isEnabled) TargetHud.render(gfx)
-
-        renderInfoPanel(r, mc, sw, sh)
+        renderPopup(r)
 
         r.flush()
 
@@ -123,6 +261,17 @@ class Hud : Module("HUD", Category.VISUAL) {
             r.drawRect(0f, 0f, sw.toFloat(), sh.toFloat(), 0f, colorUtil.rgba(0, 0, 0, 80))
             for (x in 0 until sw step 16) r.drawLine(x.toFloat(), 0f, x.toFloat(), sh.toFloat(), 0.5f, colorUtil.rgba(255, 255, 255, 30))
             for (y in 0 until sh step 16) r.drawLine(0f, y.toFloat(), sw.toFloat(), y.toFloat(), 0.5f, colorUtil.rgba(255, 255, 255, 30))
+        }
+    }
+
+    private fun renderElement(name: String, gfx: GuiGraphicsExtractor, r: AporiaRenderer, sw: Int, sh: Int) {
+        when (name) {
+            "island" -> DynamicIsland.render(r, parseMode(watermarkMode.getSelectedIndex()))
+            "target" -> if (showTargetHud.isEnabled) TargetHud.render(gfx)
+            "keybinds" -> if (showKeybinds.isEnabled) KeyBinds.render(r) else KeyBinds.lastW = 0f
+            "scoreboard" -> if (showScoreboard.isEnabled) ScoreBoard.render(r) else { ScoreBoard.active = false; ScoreBoard.lastW = 0f }
+            "potions" -> if (showPotions.isEnabled) Potions.render(r) else { Potions.active = false; Potions.lastW = 0f }
+            "panel" -> renderInfoPanel(r, mc, sw, sh)
         }
     }
 
@@ -191,11 +340,11 @@ class Hud : Module("HUD", Category.VISUAL) {
         }
     }
 
-    private fun parseMode(idx: Int): DynamicIsland.Mode = when (idx) {
-        1 -> DynamicIsland.Mode.LOGO
-        2 -> DynamicIsland.Mode.AVATAR
-        3 -> DynamicIsland.Mode.SKIN
-        else -> DynamicIsland.Mode.AUTO
+    private fun parseMode(idx: Int): AvatarRenderer.Mode = when (idx) {
+        1 -> AvatarRenderer.Mode.LOGO
+        2 -> AvatarRenderer.Mode.AVATAR
+        3 -> AvatarRenderer.Mode.SKIN
+        else -> AvatarRenderer.Mode.AUTO
     }
 
     private fun snap(v: Float): Float = (v / 16).roundToInt() * 16f

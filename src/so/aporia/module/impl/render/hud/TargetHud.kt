@@ -41,8 +41,7 @@ object TargetHud {
         val x = posX
         val y = posY
 
-        if (blur) r.drawRectBlurred(x, y, W, H, RADIUS, C_BG)
-        else r.drawRect(x, y, W, H, RADIUS, C_BG)
+        HudStyle.panel(r, x, y, W, H, RADIUS, blur)
 
         val name = target.name.string
         val health = (target.health + target.absorptionAmount).coerceAtLeast(0f)

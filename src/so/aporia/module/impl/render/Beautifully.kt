@@ -13,7 +13,8 @@ class Beautifully : Module("Beautifully", Category.VISUAL) {
 
     val blur = BooleanSetting("Blur", "Enable blur on UI elements", true)
     val features = MultiSelectSetting("Features", "Toggle UI features")
-        .options("Custom Chat", "Blur", "Dynamic Island Blur", "Target HUD Blur", "HUD Panel Blur")
+        .options("Custom Chat", "Blur", "Dynamic Island Blur", "Target HUD Blur", "HUD Panel Blur",
+            "Keybinds Blur", "Scoreboard Blur", "Potions Blur")
 
     override val settings = listOf(blur, features)
 

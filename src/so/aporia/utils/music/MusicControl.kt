@@ -4,9 +4,13 @@ import so.aporia.utils.events.StateMachineEngine
 import so.aporia.utils.files.impl.MusicFiles
 import so.aporia.utils.imports.*
 import so.aporia.utils.user.logger.Logger
+import dev.redstones.mediaplayerinfo.IMediaSession
+import dev.redstones.mediaplayerinfo.MediaPlayerInfo
+import net.minecraft.resources.Identifier
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
 import javax.sound.sampled.FloatControl
+import java.io.ByteArrayInputStream
 import java.io.File
 import com.chaos.annotation.ChaosNative
 
@@ -111,5 +115,100 @@ object MusicControl {
 
     fun seek(pos: Long) {
         clip?.let { if (it.isOpen) it.microsecondPosition = pos.coerceIn(0, it.microsecondLength) }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Unified media facade (local Clip first, then OS media)
+    //  All time values are normalized to SECONDS. OS media (redstones
+    //  MediaPlayerInfo) already reports seconds; the local Clip reports
+    //  microseconds and is converted here.
+    // ══════════════════════════════════════════════════════════════════
+
+    @Volatile private var osTitle: String? = null
+    @Volatile private var osArtist: String? = null
+    @Volatile private var osPlaying = false
+    @Volatile private var osPosSec = 0L
+    @Volatile private var osDurSec = 0L
+    @Volatile private var osPosSampleMs = 0L
+    @Volatile private var osArt: ByteArray? = null
+    @Volatile private var osSession: IMediaSession? = null
+
+    @Volatile private var pollerRunning = false
+    private var pollerThread: Thread? = null
+
+    private var artId: Identifier? = null
+    private var artHash = 0
+
+    private fun isLocalActive(): Boolean = isPlaying() || isPaused()
+
+    /** Any media (local or OS) currently present. Also lazily starts the OS-media poller. */
+    fun hasMedia(): Boolean {
+        ensureMediaPoller()
+        return isLocalActive() || !osTitle.isNullOrEmpty()
+    }
+
+    fun mediaTitle(): String? = if (isLocalActive()) getCurrentTrack() else osTitle
+    fun mediaArtist(): String? = if (isLocalActive()) null else osArtist
+    fun mediaPlaying(): Boolean = if (isLocalActive()) isPlaying() else osPlaying
+    fun mediaDurationSeconds(): Long = if (isLocalActive()) getDuration() / 1_000_000L else osDurSec
+
+    fun mediaPositionSeconds(): Long {
+        if (isLocalActive()) return getPosition() / 1_000_000L
+        // OS media is polled ~1s; extrapolate while playing so the bar moves smoothly.
+        if (osPlaying) {
+            val elapsed = (System.currentTimeMillis() - osPosSampleMs) / 1000L
+            val p = osPosSec + elapsed.coerceAtLeast(0L)
+            return if (osDurSec > 0L) p.coerceAtMost(osDurSec) else p
+        }
+        return osPosSec
+    }
+
+    /** Play/pause whichever source is active. */
+    fun mediaTogglePlayPause() {
+        if (isLocalActive()) { if (isPlaying()) pause() else resume() }
+        else osSession?.let { try { it.playPause() } catch (_: Exception) {} }
+    }
+
+    /** Current OS-media cover art as a cached texture (reloaded only when it changes). Null for local files. */
+    fun mediaArtworkId(): Identifier? {
+        if (isLocalActive()) return null
+        val bytes = osArt
+        if (bytes == null || bytes.isEmpty()) return null
+        val h = bytes.contentHashCode()
+        if (artId != null && h == artHash) return artId
+        val id = try { r.loadImage(ByteArrayInputStream(bytes)) } catch (_: Exception) { null } ?: return artId
+        artId = id; artHash = h
+        return id
+    }
+
+    private fun ensureMediaPoller() {
+        if (pollerRunning) return
+        pollerRunning = true
+        pollerThread = Thread({
+            while (pollerRunning) {
+                try {
+                    val sessions = MediaPlayerInfo.INSTANCE.mediaSessions
+                    val s = sessions?.firstOrNull { it.media?.let { m -> !m.title.isNullOrEmpty() && m.isPlaying } == true }
+                        ?: sessions?.firstOrNull { it.media?.let { m -> !m.title.isNullOrEmpty() } == true }
+                    val info = s?.media
+                    if (info != null) {
+                        osSession = s
+                        osTitle = if (!info.title.isNullOrBlank()) info.title else info.artist
+                        osArtist = info.artist
+                        osPlaying = info.isPlaying
+                        osPosSec = info.position
+                        osDurSec = info.duration
+                        osPosSampleMs = System.currentTimeMillis()
+                        osArt = info.artworkPng
+                    } else {
+                        osSession = null; osTitle = null; osArtist = null; osPlaying = false; osArt = null
+                    }
+                } catch (_: Exception) {
+                    osSession = null; osTitle = null; osArtist = null; osPlaying = false
+                }
+                try { Thread.sleep(1000) } catch (_: InterruptedException) { break }
+            }
+        }, "Aporia-MediaPoller").apply { isDaemon = true }
+        pollerThread!!.start()
     }
 }

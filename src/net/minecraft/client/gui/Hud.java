@@ -408,7 +408,7 @@ public class Hud {
     }
 
     private void extractScoreboardSidebar(final GuiGraphicsExtractor graphics, final DeltaTracker deltaTracker) {
-        if (so.aporia.module.impl.render.NoRender.hideScoreboard) return;
+        if (so.aporia.module.impl.render.NoRender.hideScoreboard || so.aporia.module.impl.render.hud.ScoreBoard.active) return;
         Scoreboard scoreboard = this.minecraft.level.getScoreboard();
         Objective teamObjective = null;
         PlayerTeam playerTeam = scoreboard.getPlayersTeam(this.minecraft.player.getScoreboardName());
@@ -490,7 +490,7 @@ public class Hud {
     }
 
     private void extractEffects(final GuiGraphicsExtractor graphics, final DeltaTracker deltaTracker) {
-        if (so.aporia.module.impl.render.NoRender.hidePotionHud) return;
+        if (so.aporia.module.impl.render.NoRender.hidePotionHud || so.aporia.module.impl.render.hud.Potions.active) return;
         Collection<MobEffectInstance> activeEffects = this.minecraft.player.getActiveEffects();
         if (!activeEffects.isEmpty() && (this.minecraft.gui.screen() == null || !this.minecraft.gui.screen().showsActiveEffects())) {
             int beneficialCount = 0;

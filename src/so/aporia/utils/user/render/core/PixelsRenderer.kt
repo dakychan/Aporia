@@ -53,6 +53,7 @@ class PixelsRenderer {
 
     lateinit var imagePipeline: RenderPipeline
     lateinit var blitPipeline: RenderPipeline
+    lateinit var imageBlitPipeline: RenderPipeline
     lateinit var postPipeline: RenderPipeline
     lateinit var orthoProjection: ProjectionMatrixBuffer
 
@@ -90,6 +91,18 @@ class PixelsRenderer {
             .withBindGroupLayout(BindGroupLayout.builder().withSampler("InputTexture").build())
             .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
             .withColorTargetState(ColorTargetState(BlendFunction(BlendFactor.ONE, BlendFactor.ZERO, BlendFactor.ONE, BlendFactor.ZERO)))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
+
+        // Same blit shader, but with proper alpha blending so transparent PNG pixels (corners of
+        // rounded/masked images) don't overwrite the framebuffer with black. blitPipeline stays
+        // ONE/ZERO because applySaturation needs an exact copy.
+        imageBlitPipeline = RenderPipeline.builder()
+            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/image_blit"))
+            .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/blit"))
+            .withBindGroupLayout(BindGroupLayout.builder().withSampler("InputTexture").build())
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
 
         postPipeline = RenderPipeline.builder()
@@ -147,7 +160,7 @@ class PixelsRenderer {
                 mesh.close()
                 val pass = encoder.createRenderPass({ -> "aporia:img_pass" }, colorView, Optional.empty<Vector4fc>())
                 pass.use {
-                    pass.setPipeline(blitPipeline)
+                    pass.setPipeline(imageBlitPipeline)
                     pass.bindTexture("InputTexture", view,
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
                     pass.setVertexBuffer(0, cachedBlitVertexBuffer.slice(0L, cachedBlitVertexBuffer.size()))
@@ -324,7 +337,7 @@ class PixelsRenderer {
             mesh.close()
             val pass = encoder.createRenderPass({ -> "aporia:blit_cropped_pass" }, colorView, Optional.empty<Vector4fc>())
             pass.use {
-                pass.setPipeline(blitPipeline)
+                pass.setPipeline(imageBlitPipeline)
                 pass.bindTexture("InputTexture", view,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
                 pass.setVertexBuffer(0, cachedBlitVertexBuffer.slice(0L, cachedBlitVertexBuffer.size()))
