@@ -62,7 +62,8 @@ class ShapesRenderer {
         taskQueue.clear()
     }
 
-    lateinit var pipeline: RenderPipeline
+    lateinit var liquidBlurPipeline: RenderPipeline
+    lateinit var basicBlurPipeline: RenderPipeline
     lateinit var roundedRectPipeline: RenderPipeline
     lateinit var mainmenuPipeline: RenderPipeline
     lateinit var logoPipeline: RenderPipeline
@@ -82,8 +83,8 @@ class ShapesRenderer {
 
     fun init() {
         val device = RenderSystem.getDevice()
-        pipeline = RenderPipeline.builder()
-            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/aporia"))
+        liquidBlurPipeline = RenderPipeline.builder()
+            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/liquid_blur"))
             .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
             .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
             .withBindGroupLayout(BindGroupLayout.builder().withUniform("Projection", UniformType.UNIFORM_BUFFER).build())
@@ -93,6 +94,17 @@ class ShapesRenderer {
             .withColorTargetState(ColorTargetState(BlendFunction(
                 BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA,
                 BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA)))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
+
+        basicBlurPipeline = RenderPipeline.builder()
+            .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/basic_blur"))
+            .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/drawrectblurred"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/drawrectblurred"))
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("Projection", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("ShapeData", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withSampler("BlurTextureSampler").build())
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
 
         roundedRectPipeline = RenderPipeline.builder()
@@ -246,15 +258,17 @@ class ShapesRenderer {
 
     @JvmOverloads
     fun drawRectBlurred(x: Float, y: Float, w: Float, h: Float, radius: Float, color: Int,
-                        blurStrength: Float = 4f, cornerMask: Int = 15) {
+                        blurStrength: Float = 4f, cornerMask: Int = 15, useBasic: Boolean = false) {
         val mc = Minecraft.getInstance()
         val gui = BlurRenderer.useGuiBlur
         val depth = currentDepth
         val sw = mc.window.guiScaledWidth.toFloat()
         val sh = mc.window.guiScaledHeight.toFloat()
+        val usingPipeline = if (useBasic) basicBlurPipeline else liquidBlurPipeline
 
         taskQueue.add(DrawTask(depth) { ->
-            if (!::pipeline.isInitialized) return@DrawTask
+            if (useBasic && !::basicBlurPipeline.isInitialized) return@DrawTask
+            if (!useBasic && !::liquidBlurPipeline.isInitialized) return@DrawTask
 
             val blurReady = if (gui) BlurRenderer.guiBlurReady else BlurRenderer.blurReady
             val blurTarget = if (gui) BlurRenderer.guiBlurTarget else BlurRenderer.blurTarget
@@ -300,9 +314,10 @@ class ShapesRenderer {
             encoder.writeToBuffer(cachedShapeBuffer.slice(), cachedShapeBB!!)
 
             val indexBuf = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES)
-            val pass = encoder.createRenderPass({ -> "aporia:blur_rect" }, colorView, Optional.empty<Vector4fc>())
+            val rpName = if (useBasic) "aporia:basic_blur_rect" else "aporia:blur_rect"
+            val pass = encoder.createRenderPass({ -> rpName }, colorView, Optional.empty<Vector4fc>())
             pass.use {
-                pass.setPipeline(pipeline)
+                pass.setPipeline(usingPipeline)
                 RenderSystem.bindDefaultUniforms(pass)
                 pass.setUniform("ShapeData", cachedShapeBuffer.slice())
                 val btv = blurTarget.colorTextureView ?: return@DrawTask
@@ -418,7 +433,7 @@ class ShapesRenderer {
                      borderMode: Int, thickness: Float, fadeCorner: Float, cornerMask: Int) {
         val mc = Minecraft.getInstance()
         val window = mc.window
-        if (!::pipeline.isInitialized) return
+        if (!::liquidBlurPipeline.isInitialized) return
 
         val a = ((color shr 24) and 0xFF) / 255f
         val r = ((color shr 16) and 0xFF) / 255f
@@ -441,7 +456,7 @@ class ShapesRenderer {
                                  mode: Int, cornerMask: Int, depth: Float, sw: Float, sh: Float) {
         val mc = Minecraft.getInstance()
         val colorView = mc.gameRenderer.mainRenderTarget().colorTextureView ?: return
-        if (!::pipeline.isInitialized) return
+        if (!::roundedRectPipeline.isInitialized) return
         val a = ((color shr 24) and 0xFF) / 255f
         val r = ((color shr 16) and 0xFF) / 255f
         val g = ((color shr 8) and 0xFF) / 255f
@@ -459,6 +474,7 @@ class ShapesRenderer {
                                        bx: Float, by: Float, bw: Float, bh: Float, radius: Float,
                                        mode: Int, borderMode: Int, thickness: Float, fadeCorner: Float,
                                        cornerMask: Int) {
+        if (!::roundedRectPipeline.isInitialized) return
         val projMatrix = Matrix4f().setOrtho(0f, sw, sh, 0f, -1000f, 1000f)
         val projSlice = orthoProjection.getBuffer(projMatrix)
         RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC)

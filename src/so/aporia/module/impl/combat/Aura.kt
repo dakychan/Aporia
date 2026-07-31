@@ -185,14 +185,16 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
         var bestValue = Double.MAX_VALUE
         val maxRange = range.getFloat()
         val lm = LocaleManager.getInstance()
-        for (player in mc.level!!.players()) {
-            if (!isValidTarget(player)) continue
-            val dist = mc.player!!.distanceTo(player)
-            if (dist > maxRange || !isInFov(player)) continue
-            val value: Double = if (targetMode.isSelected(lm.get("module.aura.target_closest"))) dist.toDouble() else (player.health + player.absorptionAmount).toDouble()
+        val closestMode = targetMode.isSelected(lm.get("module.aura.target_closest"))
+        // Iterate ALL living entities so Mobs/Animals target types actually work, not just players.
+        for (entity in mc.level!!.entitiesForRendering()) {
+            if (entity !is LivingEntity || !isValidTarget(entity)) continue
+            val dist = mc.player!!.distanceTo(entity)
+            if (dist > maxRange || !isInFov(entity)) continue
+            val value: Double = if (closestMode) dist.toDouble() else (entity.health + entity.absorptionAmount).toDouble()
             if (value < bestValue) {
                 bestValue = value
-                best = player
+                best = entity
             }
         }
         return best

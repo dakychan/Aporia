@@ -2,6 +2,7 @@ package so.aporia.utils.user.render.avatar
 
 import so.aporia.utils.imports.*
 import net.minecraft.resources.Identifier
+import net.minecraft.world.entity.player.Player
 import so.aporia.module.ModuleManager
 import so.aporia.module.impl.misc.DiscordRPCModule
 import so.aporia.utils.user.render.core.AporiaRenderer
@@ -51,6 +52,11 @@ object AvatarRenderer {
     /** The Minecraft skin (face texture) of the local player. */
     fun getSkinFromMinecraft(): Identifier? = mc.player?.skin?.body?.texturePath()
 
+    /** The skin (face texture) of an arbitrary target player — used by TargetHud for Aura targets. */
+    fun getSkinTargetFromMinecraft(target: Player): Identifier? = try {
+        mc.getSkinManager().createLookup(target.gameProfile, false).get()?.body()?.texturePath()
+    } catch (_: Exception) { null }
+
     // ── rendering ──
 
     /** Resolves and draws the avatar as a rounded/circular icon. */
@@ -61,11 +67,7 @@ object AvatarRenderer {
                 background(r, x, y, size, radius, blur)
                 r.drawImageCropped(x, y, size, size, a.id, radius, 0f, 0f, 1f, 1f)
             }
-            Kind.SKIN -> {
-                background(r, x, y, size, radius, blur)
-                r.drawImageCropped(x, y, size, size, a.id, radius, 8f / 64f, 8f / 64f, 16f / 64f, 16f / 64f)  // face
-                r.drawImageCropped(x, y, size, size, a.id, radius, 40f / 64f, 8f / 64f, 48f / 64f, 16f / 64f) // hat overlay
-            }
+            Kind.SKIN -> if (a.id != null) drawSkin(r, x, y, size, radius, a.id, blur)
             Kind.LOGO -> {
                 r.drawRect(x, y, size, size, radius, colorUtil.rgba(60, 60, 80, 255))
                 r.drawText("bold", "A", x + size / 2f - 5f, y + size / 2f - 6f, 12f, colorUtil.rgba(200, 200, 255, 255))
@@ -77,6 +79,13 @@ object AvatarRenderer {
     fun drawCircle(r: AporiaRenderer, x: Float, y: Float, size: Float, radius: Float, id: Identifier, blur: Boolean) {
         background(r, x, y, size, radius, blur)
         r.drawImageCropped(x, y, size, size, id, radius, 0f, 0f, 1f, 1f)
+    }
+
+    /** Draws a Minecraft skin (face + hat overlay) as a rounded/circular icon. */
+    fun drawSkin(r: AporiaRenderer, x: Float, y: Float, size: Float, radius: Float, id: Identifier, blur: Boolean) {
+        background(r, x, y, size, radius, blur)
+        r.drawImageCropped(x, y, size, size, id, radius, 8f / 64f, 8f / 64f, 16f / 64f, 16f / 64f)   // face
+        r.drawImageCropped(x, y, size, size, id, radius, 40f / 64f, 8f / 64f, 48f / 64f, 16f / 64f)  // hat overlay
     }
 
     private fun background(r: AporiaRenderer, x: Float, y: Float, size: Float, radius: Float, blur: Boolean) {

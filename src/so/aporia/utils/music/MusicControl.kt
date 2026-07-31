@@ -28,6 +28,8 @@ object MusicControl {
     private var clip: Clip? = null
     private var currentFile: File? = null
     private var volume = 0.5f
+    @JvmField var autoAdvance = true
+    @Volatile private var suppressEnd = false
 
     fun getState(): MusicState = sm.state()
     fun isPlaying(): Boolean = sm.state() == MusicState.PLAYING && clip?.isActive == true
@@ -59,10 +61,13 @@ object MusicControl {
             clip!!.open(stream)
             stream.close()
             setVolume(volume)
+            suppressEnd = false
             clip!!.start()
             clip!!.addLineListener { e ->
-                if (e.type == javax.sound.sampled.LineEvent.Type.STOP) {
+                // STOP also fires on pause()/stop(); suppressEnd distinguishes a real end-of-track.
+                if (e.type == javax.sound.sampled.LineEvent.Type.STOP && !suppressEnd && sm.state() == MusicState.PLAYING) {
                     sm.currentState = MusicState.IDLE
+                    if (autoAdvance) mc.execute { next() }
                 }
             }
             currentFile = target
@@ -75,16 +80,19 @@ object MusicControl {
     }
 
     fun pause() {
+        suppressEnd = true
         clip?.let { if (it.isActive) it.stop() }
         sm.currentState = MusicState.PAUSED
     }
 
     fun resume() {
+        suppressEnd = false
         clip?.let { if (it.isOpen && !it.isActive) it.start() }
         sm.currentState = MusicState.PLAYING
     }
 
     fun stop() {
+        suppressEnd = true
         clip?.let { if (it.isOpen) { it.stop(); it.close() } }
         clip = null
         currentFile = null
@@ -169,6 +177,22 @@ object MusicControl {
         else osSession?.let { try { it.playPause() } catch (_: Exception) {} }
     }
 
+    fun mediaNext() {
+        if (isLocalActive()) next() else osSession?.let { try { it.next() } catch (_: Exception) {} }
+    }
+
+    fun mediaPrevious() {
+        if (isLocalActive()) previous() else osSession?.let { try { it.previous() } catch (_: Exception) {} }
+    }
+
+    /** Clean shutdown of the local clip and the OS-media poller (call on client close). */
+    fun shutdown() {
+        stop()
+        pollerRunning = false
+        pollerThread?.interrupt()
+        pollerThread = null
+    }
+
     /** Current OS-media cover art as a cached texture (reloaded only when it changes). Null for local files. */
     fun mediaArtworkId(): Identifier? {
         if (isLocalActive()) return null
@@ -182,33 +206,36 @@ object MusicControl {
     }
 
     private fun ensureMediaPoller() {
-        if (pollerRunning) return
-        pollerRunning = true
-        pollerThread = Thread({
-            while (pollerRunning) {
-                try {
-                    val sessions = MediaPlayerInfo.INSTANCE.mediaSessions
-                    val s = sessions?.firstOrNull { it.media?.let { m -> !m.title.isNullOrEmpty() && m.isPlaying } == true }
-                        ?: sessions?.firstOrNull { it.media?.let { m -> !m.title.isNullOrEmpty() } == true }
-                    val info = s?.media
-                    if (info != null) {
-                        osSession = s
-                        osTitle = if (!info.title.isNullOrBlank()) info.title else info.artist
-                        osArtist = info.artist
-                        osPlaying = info.isPlaying
-                        osPosSec = info.position
-                        osDurSec = info.duration
-                        osPosSampleMs = System.currentTimeMillis()
-                        osArt = info.artworkPng
-                    } else {
-                        osSession = null; osTitle = null; osArtist = null; osPlaying = false; osArt = null
+        synchronized(this) {
+            if (pollerRunning && pollerThread?.isAlive == true) return
+            pollerThread?.interrupt()
+            pollerRunning = true
+            pollerThread = Thread({
+                while (pollerRunning) {
+                    try {
+                        val sessions = MediaPlayerInfo.INSTANCE.mediaSessions
+                        val s = sessions?.firstOrNull { it.media?.let { m -> !m.title.isNullOrEmpty() && m.isPlaying } == true }
+                            ?: sessions?.firstOrNull { it.media?.let { m -> !m.title.isNullOrEmpty() } == true }
+                        val info = s?.media
+                        if (info != null) {
+                            osSession = s
+                            osTitle = if (!info.title.isNullOrBlank()) info.title else info.artist
+                            osArtist = info.artist
+                            osPlaying = info.isPlaying
+                            osPosSec = info.position
+                            osDurSec = info.duration
+                            osPosSampleMs = System.currentTimeMillis()
+                            osArt = info.artworkPng
+                        } else {
+                            osSession = null; osTitle = null; osArtist = null; osPlaying = false; osArt = null
+                        }
+                    } catch (_: Exception) {
+                        osSession = null; osTitle = null; osArtist = null; osPlaying = false
                     }
-                } catch (_: Exception) {
-                    osSession = null; osTitle = null; osArtist = null; osPlaying = false
+                    try { Thread.sleep(1000) } catch (_: InterruptedException) { break }
                 }
-                try { Thread.sleep(1000) } catch (_: InterruptedException) { break }
-            }
-        }, "Aporia-MediaPoller").apply { isDaemon = true }
-        pollerThread!!.start()
+            }, "Aporia-MediaPoller").apply { isDaemon = true }
+            pollerThread!!.start()
+        }
     }
 }

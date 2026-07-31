@@ -38,6 +38,7 @@ import java.util.Optional
 import com.mojang.blaze3d.pipeline.BindGroupLayout
 import so.aporia.module.Category
 import so.aporia.module.Module
+import so.aporia.module.impl.world.FakeLag
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.ColorSetting
 import so.aporia.module.settings.SliderSetting
@@ -120,7 +121,7 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
             .withBindGroupLayout(BindGroupLayout.builder().withSampler("Sampler0").build())
             .withVertexBinding(0, DefaultVertexFormat.ENTITY).withPrimitiveTopology(PrimitiveTopology.QUADS)
             .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false))
             .withCull(false).build()
 
         outlinePipeline = RenderPipeline.builder()
@@ -131,7 +132,7 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
             .withBindGroupLayout(BindGroupLayout.builder().withUniform("Projection", UniformType.UNIFORM_BUFFER).build())
             .withVertexBinding(0, DefaultVertexFormat.ENTITY).withPrimitiveTopology(PrimitiveTopology.QUADS)
             .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false))
             .withCull(false).build()
 
         colorPipeline = RenderPipeline.builder()
@@ -142,7 +143,7 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
             .withBindGroupLayout(BindGroupLayout.builder().withUniform("Projection", UniformType.UNIFORM_BUFFER).build())
             .withVertexBinding(0, DefaultVertexFormat.ENTITY).withPrimitiveTopology(PrimitiveTopology.QUADS)
             .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false))
             .withCull(false).build()
 
         blurVBO = device.createBuffer({ -> "aporia:player_blur_vbo" }, GpuBuffer.USAGE_VERTEX or GpuBuffer.USAGE_COPY_DST, 262144L)
@@ -240,6 +241,24 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
                 gm.leftArm.visible = true; gm.rightArm.visible = true
                 gm.leftLeg.visible = true; gm.rightLeg.visible = true
             }
+        }
+
+        // -- FakeLag ghost player (server-side position outline) --
+        val fakeLag = so.aporia.module.ModuleManager.get("FakeLag") as? FakeLag
+        if (fakeLag != null && fakeLag.isEnabled && oPipeline != null && oVbo != null && oIbo != null) {
+            val disp = mc.entityRenderDispatcher
+            val ar = disp.getPlayerRenderer(selfPlayer)
+            val gs = ar.createRenderState()
+            ar.extractRenderState(selfPlayer, gs, pt)
+            val gm = ar.getModel()
+            playerModel = gm
+            gm.setupAnim(gs)
+            val col = colorUtil.rgba(255, 200, 100, 180)
+            renderOutline(gm, oPipeline, oVbo, oIbo, colorView,
+                FakeLag.serverPosX.toFloat(), FakeLag.serverPosY.toFloat(), FakeLag.serverPosZ.toFloat(), gs.scale, col)
+            gm.head.visible = true; gm.body.visible = true
+            gm.leftArm.visible = true; gm.rightArm.visible = true
+            gm.leftLeg.visible = true; gm.rightLeg.visible = true
         }
     }
 
@@ -368,16 +387,20 @@ class PlayerESP : Module("PlayerESP", Category.VISUAL) {
 
     private val outlineParticles = mutableMapOf<UUID, MutableList<OutlineParticle>>()
     private val rand = java.util.Random()
+    private var particleFrameCounter = 0
     private class OutlineParticle(var x: Float, var y: Float, var z: Float, var vx: Float, var vy: Float, var vz: Float, var life: Float, var maxLife: Float, val size: Float)
 
     private fun spawnOutlineParticles(entity: Player, count: Int) {
+        // Only spawn every 5 frames to prevent particle spam.
+        particleFrameCounter++
+        if (particleFrameCounter % 5 != 0) return
         val uuid = entity.uuid; val parts = outlineParticles.getOrPut(uuid) { mutableListOf() }
         val bb = entity.boundingBox; val cx = (bb.minX + bb.maxX) / 2.0; val cy = (bb.minY + bb.maxY) / 2.0; val cz = (bb.minZ + bb.maxZ) / 2.0
         val hw = (bb.maxX - bb.minX) / 2.0; val hh = (bb.maxY - bb.minY) / 2.0; val hz = (bb.maxZ - bb.minZ) / 2.0
         repeat(count) {
             parts.add(OutlineParticle((cx + (rand.nextDouble() - 0.5) * hw * 1.5).toFloat(), (cy + (rand.nextDouble() - 0.5) * hh * 1.5).toFloat(), (cz + (rand.nextDouble() - 0.5) * hz * 1.5).toFloat(),
                 (rand.nextFloat() - 0.5f) * 0.3f, (rand.nextFloat() - 0.5f) * 0.3f, (rand.nextFloat() - 0.5f) * 0.3f,
-                rand.nextFloat() * 2f + 1f, rand.nextFloat() * 2f + 1f, rand.nextFloat() * 0.08f + 0.03f))
+                rand.nextFloat() * 0.8f + 0.3f, rand.nextFloat() * 0.8f + 0.3f, rand.nextFloat() * 0.08f + 0.03f))
         }
     }
 

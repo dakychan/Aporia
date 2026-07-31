@@ -124,7 +124,12 @@ class NetworkServer(val port: Int) {
 
             Logger.success("NetworkServer started on port $port")
 
-            Runtime.getRuntime().addShutdownHook(Thread { shutdown() })
+            synchronized(NetworkServer::class) {
+                if (!hookAdded) {
+                    Runtime.getRuntime().addShutdownHook(Thread { shutdown() })
+                    hookAdded = true
+                }
+            }
 
             return true
         } catch (e: Exception) {
@@ -206,6 +211,8 @@ class NetworkServer(val port: Int) {
     }
 
     companion object {
+        private var hookAdded = false
+
         @JvmStatic
         fun sendResponseStatic(ctx: ChannelHandlerContext, status: HttpResponseStatus, content: String, contentType: String) {
             val response = DefaultFullHttpResponse(

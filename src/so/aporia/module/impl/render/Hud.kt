@@ -14,6 +14,7 @@ import so.aporia.module.impl.render.hud.KeyBinds
 import so.aporia.module.impl.render.hud.ScoreBoard
 import so.aporia.module.impl.render.hud.Potions
 import so.aporia.module.impl.render.hud.HudStyle
+import so.aporia.module.impl.render.hud.HotBar
 import so.aporia.module.settings.BooleanSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.module.settings.Setting
@@ -44,6 +45,7 @@ class Hud : Module("HUD", Category.VISUAL) {
     val showKeybinds = BooleanSetting("Keybinds", "Display bound modules panel", true)
     val showScoreboard = BooleanSetting("Scoreboard", "Styled server scoreboard", true)
     val showPotions = BooleanSetting("Potions", "Display active effects", true)
+    val showHotBar = BooleanSetting("HotBar", "Custom hotbar with HP, food & numbered slots", true)
 
     private val panelPos = ElementRect(0f, 0f, 0f, 0f)
     private var isDragging = false
@@ -72,7 +74,7 @@ class Hud : Module("HUD", Category.VISUAL) {
     // module's ClickGui settings — they are a separate tier from ModulesSettings / Scripts.
     override val settings: List<Setting<*>> =
         listOf(watermarkMode, showFps, showCoords, showPing, showTargetHud, showPlayerCount, showSpeed, showDirection,
-            showKeybinds, showScoreboard, showPotions)
+            showKeybinds, showScoreboard, showPotions, showHotBar)
 
     private fun elementSettings(target: String): List<Setting<*>> = when (target) {
         "keybinds" -> KeyBinds.settings
@@ -96,6 +98,8 @@ class Hud : Module("HUD", Category.VISUAL) {
     @EventHandler
     fun onMouseClick(e: MouseClickEvent) {
         if (e.action() != MouseClickEvent.Action.PRESS) return
+        // Only process HUD clicks when the cursor is free (not gameplay-locked).
+        if (mc.mouseHandler.isMouseGrabbed()) return
         val x = e.x().toFloat()
         val y = e.y().toFloat()
         val button = e.button()
@@ -107,9 +111,10 @@ class Hud : Module("HUD", Category.VISUAL) {
             e.cancel(); return
         }
 
-        // Right-click a HUD element -> open its settings popup.
+        // Right-click a HUD element -> open its settings popup (only when Beautifully is on).
         if (button == 1) {
-            elementAt(x, y)?.let { openPopup(it, x, y); e.cancel() }
+            val beautifully = mm.get("Beautifully")
+            if (beautifully != null && beautifully.isEnabled) elementAt(x, y)?.let { openPopup(it, x, y); e.cancel() }
             return
         }
         if (button != 0) return
@@ -142,6 +147,7 @@ class Hud : Module("HUD", Category.VISUAL) {
             "keybinds" -> { isDragging = true; dragTarget = "keybinds"; dragOffX = x - KeyBinds.posX; dragOffY = y - KeyBinds.posY; e.cancel() }
             "scoreboard" -> { isDragging = true; dragTarget = "scoreboard"; dragOffX = x - ScoreBoard.posX; dragOffY = y - ScoreBoard.posY; e.cancel() }
             "potions" -> { isDragging = true; dragTarget = "potions"; dragOffX = x - Potions.posX; dragOffY = y - Potions.posY; e.cancel() }
+            "hotbar" -> { isDragging = true; dragTarget = "hotbar"; dragOffX = x - HotBar.posX; dragOffY = y - HotBar.posY; e.cancel() }
         }
     }
 
@@ -152,6 +158,7 @@ class Hud : Module("HUD", Category.VISUAL) {
         showKeybinds.isEnabled && hitTest(x, y, KeyBinds.posX, KeyBinds.posY, KeyBinds.lastW, KeyBinds.lastH) -> "keybinds"
         showScoreboard.isEnabled && hitTest(x, y, ScoreBoard.posX, ScoreBoard.posY, ScoreBoard.lastW, ScoreBoard.lastH) -> "scoreboard"
         showPotions.isEnabled && hitTest(x, y, Potions.posX, Potions.posY, Potions.lastW, Potions.lastH) -> "potions"
+        showHotBar.isEnabled && hitTest(x, y, HotBar.posX, HotBar.posY, HotBar.lastW, HotBar.lastH) -> "hotbar"
         else -> null
     }
 
@@ -240,12 +247,13 @@ class Hud : Module("HUD", Category.VISUAL) {
                 "keybinds" -> { KeyBinds.posX = sx; KeyBinds.posY = sy; KeyBinds.userMoved = true }
                 "scoreboard" -> { ScoreBoard.posX = sx; ScoreBoard.posY = sy; ScoreBoard.userMoved = true }
                 "potions" -> { Potions.posX = sx; Potions.posY = sy; Potions.userMoved = true }
+                "hotbar" -> { HotBar.posX = sx; HotBar.posY = sy; HotBar.userMoved = true }
             }
         }
 
         // Render HUD elements. While dragging, the dragged element is committed (flushed) ON TOP of
         // the others so it fully overlaps them — background AND text — instead of the fixed order.
-        val order = arrayOf("island", "target", "keybinds", "scoreboard", "potions", "panel")
+        val order = arrayOf("island", "target", "keybinds", "scoreboard", "potions", "panel", "hotbar")
         val top = if (isDragging) dragTarget else ""
         for (name in order) if (name != top) renderElement(name, gfx, r, sw, sh)
         if (top.isNotEmpty()) {
@@ -272,6 +280,7 @@ class Hud : Module("HUD", Category.VISUAL) {
             "scoreboard" -> if (showScoreboard.isEnabled) ScoreBoard.render(r) else { ScoreBoard.active = false; ScoreBoard.lastW = 0f }
             "potions" -> if (showPotions.isEnabled) Potions.render(r) else { Potions.active = false; Potions.lastW = 0f }
             "panel" -> renderInfoPanel(r, mc, sw, sh)
+            "hotbar" -> if (showHotBar.isEnabled) HotBar.render(r, gfx, sw, sh) else { HotBar.active = false }
         }
     }
 

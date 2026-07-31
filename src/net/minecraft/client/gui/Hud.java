@@ -539,32 +539,33 @@ public class Hud {
     }
 
     private void extractHotbarAndDecorations(final GuiGraphicsExtractor graphics, final DeltaTracker deltaTracker) {
-        if (this.minecraft.gameMode.getPlayerMode() == GameType.SPECTATOR) {
-            this.spectatorGui.extractHotbar(graphics);
-        } else {
-            this.extractItemHotbar(graphics, deltaTracker);
-        }
+        if (!so.aporia.module.impl.render.hud.HotBar.active) {
+            if (this.minecraft.gameMode.getPlayerMode() == GameType.SPECTATOR) {
+                this.spectatorGui.extractHotbar(graphics);
+            } else {
+                this.extractItemHotbar(graphics, deltaTracker);
+            }
 
-        if (this.minecraft.gameMode.canHurtPlayer()) {
-            this.extractPlayerHealth(graphics);
-        }
+            if (this.minecraft.gameMode.canHurtPlayer()) {
+                this.extractPlayerHealth(graphics);
+            }
+            this.extractVehicleHealth(graphics);
+            Hud.ContextualInfo nextContextualInfo = this.nextContextualInfoState();
+            if (nextContextualInfo != this.contextualInfoBar.getFirst()) {
+                this.contextualInfoBar = Pair.of(nextContextualInfo, this.contextualInfoBars.get(nextContextualInfo).get());
+            }
 
-        this.extractVehicleHealth(graphics);
-        Hud.ContextualInfo nextContextualInfo = this.nextContextualInfoState();
-        if (nextContextualInfo != this.contextualInfoBar.getFirst()) {
-            this.contextualInfoBar = Pair.of(nextContextualInfo, this.contextualInfoBars.get(nextContextualInfo).get());
-        }
+            this.contextualInfoBar.getSecond().extractBackground(graphics, deltaTracker);
+            if (this.minecraft.gameMode.hasExperience() && this.minecraft.player.experienceLevel > 0) {
+                ContextualBar.extractExperienceLevel(graphics, this.minecraft.font, this.minecraft.player.experienceLevel);
+            }
 
-        this.contextualInfoBar.getSecond().extractBackground(graphics, deltaTracker);
-        if (this.minecraft.gameMode.hasExperience() && this.minecraft.player.experienceLevel > 0) {
-            ContextualBar.extractExperienceLevel(graphics, this.minecraft.font, this.minecraft.player.experienceLevel);
-        }
-
-        this.contextualInfoBar.getSecond().extractRenderState(graphics, deltaTracker);
-        if (this.minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR) {
-            this.extractSelectedItemName(graphics);
-        } else if (this.minecraft.player.isSpectator()) {
-            this.spectatorGui.extractAction(graphics);
+            this.contextualInfoBar.getSecond().extractRenderState(graphics, deltaTracker);
+            if (this.minecraft.gameMode.getPlayerMode() != GameType.SPECTATOR) {
+                this.extractSelectedItemName(graphics);
+            } else if (this.minecraft.player.isSpectator()) {
+                this.spectatorGui.extractAction(graphics);
+            }
         }
     }
 

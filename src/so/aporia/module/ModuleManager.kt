@@ -31,6 +31,7 @@ object ModuleManager {
             so.aporia.module.impl.player.NoPush(),
             so.aporia.module.impl.player.ElytraHelper(),
             so.aporia.module.impl.world.MiddleClick(),
+            so.aporia.module.impl.world.FakeLag(),
             so.aporia.module.impl.move.Speed(),
             so.aporia.module.impl.move.AutoSprint(),
             so.aporia.module.impl.move.Velocity(),
@@ -44,6 +45,7 @@ object ModuleManager {
             so.aporia.module.impl.combat.ElytraTarget(),
             so.aporia.module.impl.render.NoRender(),
             so.aporia.module.impl.render.PlayerESP(),
+            so.aporia.module.impl.render.Hands(),
             so.aporia.module.impl.render.WorldRenderer()
         )
     }

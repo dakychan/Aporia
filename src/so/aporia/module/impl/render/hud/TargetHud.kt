@@ -8,80 +8,76 @@ import so.aporia.module.ModuleManager
 import so.aporia.module.impl.combat.Aura
 import so.aporia.module.impl.combat.TPAura
 import so.aporia.module.impl.render.Beautifully
+import so.aporia.utils.user.render.avatar.AvatarRenderer
+import so.aporia.utils.user.render.font.Fonts
 import com.chaos.annotation.ChaosNative
 @ChaosNative
 object TargetHud {
 
-    const val W = 160f
-    const val H = 48f
-    const val PAD = 8f
-    const val MARGIN = 4f
-    const val FS = 12f
-    const val HEALTH_FS = 16f
-    const val RADIUS = 8f
-    @JvmField var posX = MARGIN
+    // Compact horizontal pill (ported from the Aporia HUD mockup): [skin] name [hp bar] hp
+    const val H = 26f
+    const val PAD = 5f
+    const val GAP = 7f
+    const val NAME_FS = 11f
+    const val HP_FS = 10.5f
+    const val BAR_W = 62f
+    const val BAR_H = 4f
+
+    @JvmField var W = 120f            // updated each render for the drag hit-test
+    @JvmField var posX = 4f
     @JvmField var posY = 56f
-    val C_BG = colorUtil.rgba(12, 18, 22, 200)
-    val C_ACCENT = colorUtil.rgba(80, 200, 200, 255)
-    val C_NAME = colorUtil.rgba(255, 255, 255, 255)
-    val C_DIST = colorUtil.rgba(180, 180, 190, 200)
-    val C_HEALTH_GREEN = colorUtil.rgba(85, 255, 85, 255)
-    val C_HEALTH_YELLOW = colorUtil.rgba(255, 255, 85, 255)
-    val C_HEALTH_RED = colorUtil.rgba(255, 85, 85, 255)
-    val C_BAR_BG = colorUtil.rgba(0, 0, 0, 100)
+
+    private val C_NAME = colorUtil.rgba(255, 255, 255, 255)
+    private val C_GREEN = colorUtil.rgba(85, 255, 85, 255)
+    private val C_YELLOW = colorUtil.rgba(255, 255, 85, 255)
+    private val C_RED = colorUtil.rgba(255, 85, 85, 255)
+    private val C_BAR_BG = colorUtil.rgba(0, 0, 0, 110)
 
     @JvmStatic
     fun render(gfx: GuiGraphicsExtractor) {
         if (mc.player == null || mc.level == null) return
-
         val target = resolveTarget() ?: return
         if (target.isDeadOrDying) return
+
         val blur = Beautifully.isBlurEnabled() && Beautifully.isFeatureEnabled("Target HUD Blur")
-
-        val x = posX
-        val y = posY
-
-        HudStyle.panel(r, x, y, W, H, RADIUS, blur)
 
         val name = target.name.string
         val health = (target.health + target.absorptionAmount).coerceAtLeast(0f)
         val maxHealth = target.maxHealth.coerceAtLeast(1f)
         val healthPct = (health / maxHealth).coerceIn(0f, 1f)
-
-        val healthColor = when {
-            health > 10 -> C_HEALTH_GREEN
-            health > 5 -> C_HEALTH_YELLOW
-            else -> C_HEALTH_RED
-        }
-
-        val avatarSize = H - PAD * 2
-        val avatarX = x + PAD
-        val avatarY = y + PAD
-        r.drawRect(avatarX, avatarY, avatarSize, avatarSize, avatarSize / 2f, colorUtil.rgba(30, 34, 40, 255))
-        val skinId = (target as? Player)?.let { mc.getSkinManager().createLookup(it.gameProfile, false).get().body().texturePath() }
-        if (skinId != null) {
-            r.drawImageCropped(avatarX, avatarY, avatarSize, avatarSize, skinId, avatarSize / 2f, 8f/64f, 8f/64f, 16f/64f, 16f/64f)
-        }
-
-        val textX = avatarX + avatarSize + PAD
-        val rightArea = x + W - PAD
-
-        r.drawText("bold", name, textX, y + PAD, FS, C_NAME)
-
-        val dist = mc.player!!.distanceTo(target).toInt()
-        val distText = "${dist}m"
-        val distW = r.getTextWidth("regular", distText, 10f)
-        r.drawText("regular", distText, rightArea - distW, y + PAD, 10f, C_DIST)
-
+        val healthColor = when { health > 10f -> C_GREEN; health > 6f -> C_YELLOW; else -> C_RED }
         val hpText = String.format("%.1f", health)
-        val hpW = r.getTextWidth("bold", hpText, HEALTH_FS)
-        r.drawText("bold", hpText, rightArea - hpW, y + H - PAD - HEALTH_FS, HEALTH_FS, healthColor)
 
-        val barY = y + H - PAD - 4f
-        val barW = rightArea - textX
-        val barH = 4f
-        r.drawRect(textX, barY, barW, barH, 2f, C_BAR_BG)
-        r.drawRect(textX, barY, barW * healthPct, barH, 2f, healthColor)
+        val avatar = H - PAD * 2
+        val nameW = r.getTextWidth(Fonts.BOLD, name, NAME_FS)
+        val hpW = r.getTextWidth(Fonts.BOLD, hpText, HP_FS)
+        val w = PAD + avatar + GAP + nameW + GAP + BAR_W + GAP + hpW + PAD
+        W = w
+
+        val x = posX
+        val y = posY
+        HudStyle.panel(r, x, y, w, H, H / 2f, blur)
+
+        // avatar — the TARGET's skin (not ours)
+        val ax = x + PAD
+        val ay = y + PAD
+        val skinId = (target as? Player)?.let { AvatarRenderer.getSkinTargetFromMinecraft(it) }
+        if (skinId != null) AvatarRenderer.drawSkin(r, ax, ay, avatar, avatar / 2f, skinId, blur)
+        else r.drawRect(ax, ay, avatar, avatar, avatar / 2f, colorUtil.rgba(30, 34, 40, 255))
+
+        // name
+        val nameX = ax + avatar + GAP
+        r.drawText(Fonts.BOLD, name, nameX, y + (H - NAME_FS) / 2f, NAME_FS, C_NAME)
+
+        // inline hp bar
+        val barX = nameX + nameW + GAP
+        val barY = y + (H - BAR_H) / 2f
+        r.drawRect(barX, barY, BAR_W, BAR_H, BAR_H / 2f, C_BAR_BG)
+        r.drawRect(barX, barY, BAR_W * healthPct, BAR_H, BAR_H / 2f, healthColor)
+
+        // hp number
+        val hpX = barX + BAR_W + GAP
+        r.drawText(Fonts.BOLD, hpText, hpX, y + (H - HP_FS) / 2f, HP_FS, healthColor)
     }
 
     private fun resolveTarget(): LivingEntity? {

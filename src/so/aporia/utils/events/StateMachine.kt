@@ -53,21 +53,6 @@ class StateMachineEngine<S : Enum<S>>(
 
     fun isIn(vararg states: S): Boolean = states.any { it == currentState }
 
-    inline fun <reified T : Any> on(from: S, to: S, crossinline handler: () -> Unit) {
-        transitions[from to T::class] = to
-        val eventType = T::class
-        EventBus.register(object {
-            @EventHandler
-            fun handle(e: Any) {
-                if (currentState == from && eventType.isInstance(e)) {
-                    handler()
-                    @Suppress("UNCHECKED_CAST")
-                    EventBus.post(StateTransitionEvent(owner, to, e))
-                }
-            }
-        })
-    }
-
     private fun parseState(name: String): S? =
         stateClass.java.enumConstants.find { it.name.equals(name, ignoreCase = true) }
 

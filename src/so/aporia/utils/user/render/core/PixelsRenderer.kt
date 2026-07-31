@@ -430,12 +430,13 @@ class PixelsRenderer {
     }
 
     fun loadImage(stream: InputStream): Identifier? {
-        val key = "discord_avatar_" + System.currentTimeMillis()
+        val key = "discord_avatar"
         imageIds[key]?.let { return it }
         try {
             val img = com.mojang.blaze3d.platform.NativeImage.read(stream)
             val tex = DynamicTexture({ -> key }, img)
-            val id = Identifier.fromNamespaceAndPath("aporia", "user_image/discord_avatar_" + Math.abs(key.hashCode()))
+            val id = Identifier.fromNamespaceAndPath("aporia", "user_image/discord_avatar")
+            imageTextures[key]?.close()
             Minecraft.getInstance().textureManager.register(id, tex)
             imageIds[key] = id
             imageTextures[key] = tex

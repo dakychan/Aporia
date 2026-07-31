@@ -23,16 +23,19 @@ object ConfigFile {
     private const val AUTO_SAVE_INTERVAL_MS = 30000L
 
     private fun startAutoSave() {
-        if (autoSaveThread?.isAlive == true) return
-        autoSaveThread = Thread({
-            while (!Thread.currentThread().isInterrupted) {
-                try {
-                    Thread.sleep(AUTO_SAVE_INTERVAL_MS)
-                    if (dirty) save()
-                } catch (_: InterruptedException) { break }
-                catch (e: Exception) { Logger.error("Auto-save error: ${e.message}") }
-            }
-        }, "Aporia-ConfigAutoSave").apply { isDaemon = true; start() }
+        synchronized(this) {
+            if (autoSaveThread?.isAlive == true) return
+            autoSaveThread?.interrupt()
+            autoSaveThread = Thread({
+                while (!Thread.currentThread().isInterrupted) {
+                    try {
+                        Thread.sleep(AUTO_SAVE_INTERVAL_MS)
+                        if (dirty) save()
+                    } catch (_: InterruptedException) { break }
+                    catch (e: Exception) { Logger.error("Auto-save error: ${e.message}") }
+                }
+            }, "Aporia-ConfigAutoSave").apply { isDaemon = true; start() }
+        }
     }
 
     @JvmStatic

@@ -68,45 +68,38 @@ object Potions {
         active = true
         val blur = Beautifully.isBlurEnabled() && Beautifully.isFeatureEnabled("Potions Blur")
 
-        // ── measure widest pill ──
+        // ── measure widest row ──
         var maxW = 0f
-        val widths = FloatArray(pots.size)
-        for (i in pots.indices) {
-            val p = pots[i]
+        for (p in pots) {
             val nameW = r.getTextWidth(Fonts.REGULAR, p.name, NAME_FS)
             val timeW = if (p.time.isEmpty()) 0f else GAP_NAME_TIME + r.getTextWidth(Fonts.BOLD, p.time, TIME_FS)
             val pw = HPAD + ICON + ICON_GAP + nameW + timeW + HPAD
-            widths[i] = pw
             if (pw > maxW) maxW = pw
         }
-        val h = pots.size * PILL_H + (pots.size - 1) * PILL_GAP
+        val panelH = HudStyle.PAD + pots.size * PILL_H + (pots.size - 1) * PILL_GAP + HudStyle.PAD
 
-        placeAndClamp(maxW, h)
+        placeAndClamp(maxW, panelH)
         val x = posX
         val y = posY
-        lastW = maxW; lastH = h
+        lastW = maxW; lastH = panelH
 
-        // ── pills (right-aligned within the drag box) ──
-        val rightEdge = x + maxW
-        var pillY = y
-        for (i in pots.indices) {
-            val p = pots[i]
-            val pw = widths[i]
-            val px = rightEdge - pw
+        // ── single container for all effects ──
+        HudStyle.panel(r, x, y, maxW, panelH, HudStyle.RADIUS, blur)
 
-            HudStyle.panel(r, px, pillY, pw, PILL_H, PILL_H / 2f, blur)
+        // ── effects inside the container ──
+        var rowY = y + HudStyle.PAD
+        for (p in pots) {
+            val iconY = rowY + (PILL_H - ICON) / 2f
+            if (p.icon != null) r.drawImage(x + HPAD, iconY, ICON, ICON, p.icon, 0f)
 
-            val iconY = pillY + (PILL_H - ICON) / 2f
-            if (p.icon != null) r.drawImage(px + HPAD, iconY, ICON, ICON, p.icon, 0f)
-
-            val nameX = px + HPAD + ICON + ICON_GAP
-            r.drawText(Fonts.REGULAR, p.name, nameX, pillY + (PILL_H - NAME_FS) / 2f, NAME_FS, HudStyle.text())
+            val nameX = x + HPAD + ICON + ICON_GAP
+            r.drawText(Fonts.REGULAR, p.name, nameX, rowY + (PILL_H - NAME_FS) / 2f, NAME_FS, HudStyle.text())
 
             if (p.time.isNotEmpty()) {
                 val timeW = r.getTextWidth(Fonts.BOLD, p.time, TIME_FS)
-                r.drawText(Fonts.BOLD, p.time, px + pw - HPAD - timeW, pillY + (PILL_H - TIME_FS) / 2f, TIME_FS, HudStyle.textDim())
+                r.drawText(Fonts.BOLD, p.time, x + maxW - HPAD - timeW, rowY + (PILL_H - TIME_FS) / 2f, TIME_FS, HudStyle.textDim())
             }
-            pillY += PILL_H + PILL_GAP
+            rowY += PILL_H + PILL_GAP
         }
     }
 

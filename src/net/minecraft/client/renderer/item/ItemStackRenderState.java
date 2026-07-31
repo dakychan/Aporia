@@ -114,6 +114,15 @@ public class ItemStackRenderState {
         }
     }
 
+    // --- Aporia: expose layers so the Hands module can re-render held items through its own pipeline ---
+    public int aporiaLayerCount() {
+        return this.activeLayerCount;
+    }
+
+    public ItemStackRenderState.LayerRenderState aporiaLayer(final int index) {
+        return this.layers[index];
+    }
+
     public AABB getModelBoundingBox() {
         if (this.cachedModelBoundingBox != null) {
             return this.cachedModelBoundingBox;
@@ -245,6 +254,19 @@ public class ItemStackRenderState {
         private void applyTransform(final PoseStack.Pose localPose) {
             this.itemTransform.apply(ItemStackRenderState.this.displayContext.leftHand(), localPose);
             localPose.mulPose(this.localTransform);
+        }
+
+        // --- Aporia accessors for the Hands module ---
+        public void aporiaApplyTransform(final PoseStack.Pose localPose) {
+            this.applyTransform(localPose);
+        }
+
+        public boolean aporiaHasSpecialRenderer() {
+            return this.specialRenderer != null;
+        }
+
+        public int[] aporiaTints() {
+            return this.tintLayers != null ? this.tintLayers.toArray(EMPTY_TINTS) : EMPTY_TINTS;
         }
     }
 }

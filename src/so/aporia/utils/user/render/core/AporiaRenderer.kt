@@ -81,6 +81,7 @@ object AporiaRenderer {
         AporiaRenderer3D.INSTANCE.cleanup()
         so.aporia.utils.files.impl.ConfigFile.stopAutoSave()
         WhoIs.shutdown()
+        so.aporia.utils.music.MusicControl.shutdown()
         Aporia.FONTS.close()
         entityGlowVBO?.close(); entityGlowVBO = null
         entityGlowMVP?.close(); entityGlowMVP = null
@@ -130,6 +131,8 @@ object AporiaRenderer {
         shapes.drawRectBlurred(x, y, w, h, radius, color, blurStrength, 15)
     fun drawRectBlurred(x: Float, y: Float, w: Float, h: Float, radius: Float, color: Int, blurStrength: Float, cornerMask: Int) =
         shapes.drawRectBlurred(x, y, w, h, radius, color, blurStrength, cornerMask)
+    fun drawRectBlurred(x: Float, y: Float, w: Float, h: Float, radius: Float, color: Int, blurStrength: Float, cornerMask: Int, useBasic: Boolean) =
+        shapes.drawRectBlurred(x, y, w, h, radius, color, blurStrength, cornerMask, useBasic)
     @JvmOverloads fun drawRect(x: Float, y: Float, w: Float, h: Float, radius: Float = 0f, color: Int = -1, cornerMask: Int = 15) =
         shapes.drawRect(x, y, w, h, radius, color, cornerMask)
     fun drawLine(x1: Float, y1: Float, x2: Float, y2: Float, thickness: Float, color: Int) =

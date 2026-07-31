@@ -18,6 +18,10 @@ class ClickGui : Module("ClickGui", Category.VISUAL, 41) {
         .selected("Beatiful")
 
     val browserUrl = TextSetting("BrowserURL", "URL для браузера", "about:blank")
+    val blurStyle = SelectSetting("BlurStyle", "Panel blur shader style")
+        .value("BasicBlur", "LiquidGlass")
+        .selected("BasicBlur")
+
     val fontRendererMode = SelectSetting("Font Renderer", "Text rendering backend")
         .value("MSDF", "TTF", "OTF")
         .selected("MSDF")
@@ -45,5 +49,5 @@ class ClickGui : Module("ClickGui", Category.VISUAL, 41) {
         if (mc.gui.screen() is ClickGuiScreen) mc.gui.setScreen(null)
     }
 
-    override val settings = listOf(guiMode, browserUrl, fontRendererMode, fontFamily, savedCategory, savedScroll, savedSettingsScroll)
+    override val settings = listOf(guiMode, blurStyle, browserUrl, fontRendererMode, fontFamily, savedCategory, savedScroll, savedSettingsScroll)
 }

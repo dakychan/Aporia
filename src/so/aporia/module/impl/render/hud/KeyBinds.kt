@@ -1,6 +1,8 @@
 package so.aporia.module.impl.render.hud
 
 import so.aporia.utils.imports.*
+import so.aporia.module.Category
+import so.aporia.module.Module
 import so.aporia.module.ModuleManager
 import so.aporia.module.impl.render.Beautifully
 import so.aporia.module.settings.BooleanSetting
@@ -33,9 +35,11 @@ object KeyBinds {
     private const val KEY_FS = 8.5f
     private const val DOT = 5f
     private const val DOT_GAP = 7f
-    private const val ROW_H = 15f
+    private const val ROW_H = 16f
     private const val ROW_GAP = 2f
     private const val GAP_NAME_KEY = 12f
+    private const val CAT_ICON = 12f
+    private const val GAP_CAT_NAME = 5f
 
     private fun keyLabel(code: Int): String = when {
         code >= 500 -> when (code) { 500 -> "LMB"; 501 -> "RMB"; 502 -> "MMB"; else -> "M${code - 497}" }
@@ -58,7 +62,7 @@ object KeyBinds {
         var contentW = r.getTextWidth(Fonts.BOLD, header, HEADER_FS)
         for (m in binds) {
             val keyW = r.getTextWidth(Fonts.BOLD, keyLabel(m.keybind), KEY_FS) + 10f
-            val rowW = DOT + DOT_GAP + r.getTextWidth(Fonts.REGULAR, m.name, NAME_FS) + GAP_NAME_KEY + keyW
+            val rowW = DOT + DOT_GAP + CAT_ICON + GAP_CAT_NAME + r.getTextWidth(Fonts.REGULAR, m.name, NAME_FS) + GAP_NAME_KEY + keyW
             if (rowW > contentW) contentW = rowW
         }
         val w = contentW + HudStyle.PAD * 2
@@ -83,7 +87,11 @@ object KeyBinds {
             val dotY = rowY + (ROW_H - DOT) / 2f
             r.drawRect(rowX + 5f, dotY, DOT, DOT, DOT / 2f, if (m.isEnabled) HudStyle.accent() else HudStyle.dimDot())
 
-            val nameX = rowX + 5f + DOT + DOT_GAP
+            val iconX = rowX + 5f + DOT + DOT_GAP
+            val iconY = rowY + (ROW_H - CAT_ICON) / 2f
+            r.drawImage(iconX, iconY, CAT_ICON, CAT_ICON, m.category.texture, 0f)
+
+            val nameX = iconX + CAT_ICON + GAP_CAT_NAME
             val nameY = rowY + (ROW_H - NAME_FS) / 2f
             r.drawText(Fonts.REGULAR, m.name, nameX, nameY, NAME_FS,
                 if (m.isEnabled) HudStyle.text() else HudStyle.textDim())
@@ -92,7 +100,9 @@ object KeyBinds {
             val keyW = r.getTextWidth(Fonts.BOLD, keyStr, KEY_FS) + 10f
             val keyX = x + w - HudStyle.PAD - keyW
             val keyY = rowY + (ROW_H - (KEY_FS + 6f)) / 2f
-            HudStyle.chip(r, keyStr, keyX, keyY, KEY_FS, HudStyle.textDim(), HudStyle.chipBg())
+            val chipBg = if (m.isEnabled) colorUtil.rgba(255, 255, 255, 50) else HudStyle.chipBg()
+            val chipFg = if (m.isEnabled) HudStyle.text() else HudStyle.textDim()
+            HudStyle.chip(r, keyStr, keyX, keyY, KEY_FS, chipFg, chipBg)
 
             rowY += ROW_H + ROW_GAP
         }

@@ -134,7 +134,6 @@ class NameTags : Module("NameTags", Category.VISUAL) {
                 if (layout != null) entity to layout else null
             }
 
-        gfx.nextStratum()
         val pose = gfx.pose()
         pose.pushMatrix()
 
@@ -211,8 +210,6 @@ class NameTags : Module("NameTags", Category.VISUAL) {
                 }
             }
         }
-
-        gfx.nextStratum()
 
         // Phase 3: text
         for ((entity, layout) in renderable) {

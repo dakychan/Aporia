@@ -99,10 +99,13 @@ class Aporia private constructor() : ResourceManagerReloadListener {
             configLoadDeferred = false
             ConfigFile.load()
         }
+        @Suppress("DEPRECATION")
         val mem = Runtime.getRuntime()
-        if (mem.freeMemory() < 32L * 1024L * 1024L) {
+        if (mem.freeMemory() < 32L * 1024L * 1024L && renderErrorCount == 0) {
             System.gc()
-            if (mem.freeMemory() < 16L * 1024L * 1024L) return
+        }
+        if (mem.freeMemory() < 16L * 1024L * 1024L) {
+            if (renderErrorCount > 3) return
         }
         try {
             val beautifully = mm.get("Beautifully") as? Beautifully

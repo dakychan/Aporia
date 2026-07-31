@@ -18,6 +18,7 @@ object ThreadManager {
 
     init {
         init()
+        Runtime.getRuntime().addShutdownHook(Thread { shutdown() })
     }
 
     private fun init() {

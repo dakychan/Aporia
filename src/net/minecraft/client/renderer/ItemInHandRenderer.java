@@ -138,6 +138,11 @@ public class ItemInHandRenderer {
         if (!itemStack.isEmpty()) {
             ItemStackRenderState renderState = new ItemStackRenderState();
             this.itemModelResolver.updateForTopItem(renderState, itemStack, type, mob.level(), mob, mob.getId() + type.ordinal());
+            if (so.aporia.module.impl.render.Hands.active() && so.aporia.module.impl.render.Hands.captureItems()
+                && (type == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || type == ItemDisplayContext.FIRST_PERSON_LEFT_HAND)
+                && so.aporia.module.impl.render.Hands.renderItemCaptured(renderState, poseStack)) {
+                return;
+            }
             renderState.submit(poseStack, submitNodeCollector, lightCoords, OverlayTexture.NO_OVERLAY, 0);
         }
     }
@@ -281,6 +286,13 @@ public class ItemInHandRenderer {
         poseStack.translate(invert * 5.6F, 0.0F, 0.0F);
         AvatarRenderer<AbstractClientPlayer> avatarRenderer = this.entityRenderDispatcher.getPlayerRenderer(player);
         Identifier skinTexture = player.getSkin().body().texturePath();
+        if (so.aporia.module.impl.render.Hands.active()) {
+            net.minecraft.client.model.player.PlayerModel handModel = avatarRenderer.getModel();
+            net.minecraft.client.model.geom.ModelPart armPart = isRightArm ? handModel.rightArm : handModel.leftArm;
+            boolean handSleeve = player.isModelPartShown(isRightArm ? PlayerModelPart.RIGHT_SLEEVE : PlayerModelPart.LEFT_SLEEVE);
+            so.aporia.module.impl.render.Hands.renderArm(handModel, armPart, poseStack, skinTexture, handSleeve);
+            return;
+        }
         if (isRightArm) {
             avatarRenderer.renderRightHand(poseStack, submitNodeCollector, lightCoords, skinTexture, player.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE));
         } else {
